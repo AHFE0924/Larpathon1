@@ -5,17 +5,14 @@ const TILE_SIZE = 32
 var player: Area2D
 
 func _ready() -> void:
-	# Find the player in the scene
 	player = get_tree().get_first_node_in_group("player")
 	
-	# Connect the timer to make the enemy move every 0.6 seconds
 	$Timer.timeout.connect(_on_timer_timeout)
 
 func _on_timer_timeout() -> void:
 	if not player: 
 		return
 		
-	# Figure out which way to walk to get closer to the player
 	var diff = player.global_position - global_position
 	var dir = Vector2.ZERO
 	
@@ -30,7 +27,6 @@ func try_move(dir: Vector2) -> void:
 	ray.target_position = dir * TILE_SIZE
 	ray.force_raycast_update()
 	
-	# Only move if there is no wall blocking the path
 	if not ray.is_colliding():
 		var tween = create_tween()
 		tween.tween_property(self, "global_position", global_position + (dir * TILE_SIZE), 0.15)

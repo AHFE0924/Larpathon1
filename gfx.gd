@@ -1,6 +1,4 @@
 extends Node2D
-# Small shapes drawn in code: the anchor, the exit portal, power-ups and the
-# short-lived effects (rings, bursts, sword slashes).
 
 const ONE_SHOT := ["ring", "burst", "slash"]
 

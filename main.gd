@@ -1,8 +1,4 @@
 extends Node2D
-# Runs one level: builds a random map, scatters hazards, coins and slimes on
-# it, and applies the rules (damage, pickups, objective, level clear).
-#
-# Objective: collect every coin to open the portal, then step into it.
 
 const TILE := 32
 const COLS := 25
@@ -22,12 +18,12 @@ const Board := preload("res://board.gd")
 const GFX := preload("res://gfx.gd")
 const Hud := preload("res://hud.gd")
 
-var grid: Array = []          # grid[y][x]: 0 = floor, 1 = wall
-var hazards := {}             # cell -> hazard node
-var coins := {}               # cell -> coin node
-var powerups := {}            # cell -> power-up node
+var grid: Array = []
+var hazards := {}
+var coins := {}
+var powerups := {}
 var enemies: Array = []
-var dist := {}                # cell -> steps to the hero (slimes follow this)
+var dist := {}
 var player = null
 var portal = null
 var portal_cell := NO_CELL
@@ -40,7 +36,7 @@ var coins_got := 0
 var kills := 0
 var level_time := 0.0
 var freeze_time := 0.0
-var enemy_speed := 1.0        # multiplier on the wait between hops (lower = faster)
+var enemy_speed := 1.0
 var enemy_cap := 4
 var tough_chance := 0.0
 var goblin_chance := 0.0
@@ -62,7 +58,6 @@ var hud
 
 func _ready() -> void:
 	get_tree().paused = false
-	# Anything placed by hand in main.tscn is replaced by the generated level.
 	for c in get_children():
 		remove_child(c)
 		c.queue_free()
@@ -119,8 +114,6 @@ func _process(delta: float) -> void:
 	hud.refresh()
 
 
-# --- grid helpers ------------------------------------------------------------
-
 func cell_to_world(c: Vector2i) -> Vector2:
 	return Vector2(c.x * TILE + TILE * 0.5, c.y * TILE + TILE * 0.5)
 
@@ -149,7 +142,6 @@ func enemy_can_enter(c: Vector2i, me) -> bool:
 	return other == null or other == me
 
 
-# Steps from `start` to every tile that can be walked to.
 func _flood(start: Vector2i, avoid_hazards: bool) -> Dictionary:
 	var out := {start: 0}
 	var queue: Array = [start]
@@ -176,8 +168,6 @@ func _occupied(c: Vector2i) -> bool:
 	return enemy_at(c) != null
 
 
-# A random empty tile at least min_d steps away (per `field`). If nothing is
-# that far, the distance is relaxed until something is found.
 func _pick_cell(field: Dictionary, min_d: int) -> Vector2i:
 	var d := min_d
 	while d >= 1:
@@ -191,14 +181,11 @@ func _pick_cell(field: Dictionary, min_d: int) -> Vector2i:
 	return NO_CELL
 
 
-# --- level generation --------------------------------------------------------
-
 func _generate() -> void:
 	var lvl: int = GameData.level
 	var kind: int = (lvl - 1) % MAP_NAMES.size() if lvl <= MAP_NAMES.size() else randi() % MAP_NAMES.size()
 	map_name = MAP_NAMES[kind]
 
-	# Map: carve walls, pick a start, and make sure most of it is reachable.
 	var start := NO_CELL
 	var reach := {}
 	var ok := false
@@ -218,7 +205,7 @@ func _generate() -> void:
 	for y in ROWS:
 		for x in COLS:
 			if grid[y][x] == 0 and not reach.has(Vector2i(x, y)):
-				grid[y][x] = 1   # seal pockets nobody can get to
+				grid[y][x] = 1
 	board.queue_redraw()
 
 	player = PlayerScene.instantiate()
@@ -226,7 +213,6 @@ func _generate() -> void:
 	player.cell = start
 	actors.add_child(player)
 
-	# Hazards: random tiles, but never one that cuts part of the map off.
 	var hazard_n: int = min(3 + lvl, 14)
 	for i in hazard_n:
 		for attempt in 12:
@@ -245,7 +231,6 @@ func _generate() -> void:
 		hazards[c] = h
 	var field := _flood(start, true)
 
-	# Exit portal, far from the start.
 	portal_cell = _pick_cell(field, 14)
 	portal = GFX.new()
 	portal.kind = "portal"
@@ -253,7 +238,6 @@ func _generate() -> void:
 	portal.position = cell_to_world(portal_cell)
 	objects.add_child(portal)
 
-	# Coins.
 	coins_total = min(4 + lvl, 12)
 	for i in coins_total:
 		var c := _pick_cell(field, 2)
@@ -266,7 +250,6 @@ func _generate() -> void:
 		coins[c] = coin
 	coins_total = coins.size()
 
-	# Slimes.
 	enemy_cap = min(3 + lvl, 10)
 	enemy_speed = max(0.7, 1.0 - 0.03 * (lvl - 1))
 	tough_chance = 0.0 if lvl < 3 else min(0.5, 0.15 + 0.05 * (lvl - 3))
@@ -276,7 +259,6 @@ func _generate() -> void:
 	for i in min(1 + lvl, 8):
 		var c := _pick_cell(field, 7)
 		if c != NO_CELL:
-			# from level 2 on there is always at least one goblin
 			_spawn_enemy(c, 1.2, "goblin" if (i == 0 and lvl >= 2) else "")
 
 	if lvl >= 2:
@@ -295,13 +277,13 @@ func _carve(kind: int) -> void:
 	var cx := COLS / 2
 	var cy := ROWS / 2
 	match kind:
-		0:  # Open Field: a few scattered blocks
+		0:
 			for i in randi_range(6, 9):
 				var c := Vector2i(randi_range(2, COLS - 3), randi_range(2, ROWS - 3))
 				_set_wall(c, true)
 				if randf() < 0.5:
 					_set_wall(c + DIRS[randi() % 4], true)
-		1:  # The Pillars: a regular grid of pillars, some missing, some wider
+		1:
 			for x in range(4, COLS - 3, 4):
 				for y in range(3, ROWS - 2, 3):
 					if randf() < 0.15:
@@ -309,7 +291,7 @@ func _carve(kind: int) -> void:
 					_set_wall(Vector2i(x, y), true)
 					if randf() < 0.35:
 						_set_wall(Vector2i(x, y) + DIRS[randi() % 4], true)
-		2:  # Crossroads: a big cross with a gap in each arm
+		2:
 			for x in range(3, COLS - 3):
 				_set_wall(Vector2i(x, cy), true)
 			for y in range(2, ROWS - 2):
@@ -318,7 +300,7 @@ func _carve(kind: int) -> void:
 			_set_wall(Vector2i(randi_range(cx + 2, COLS - 5), cy), false)
 			_set_wall(Vector2i(cx, randi_range(2, cy - 2)), false)
 			_set_wall(Vector2i(cx, randi_range(cy + 2, ROWS - 3)), false)
-		3:  # Four Chambers: four rooms joined by doors
+		3:
 			for x in range(1, COLS - 1):
 				_set_wall(Vector2i(x, cy), true)
 			for y in range(1, ROWS - 1):
@@ -328,7 +310,7 @@ func _carve(kind: int) -> void:
 				_set_wall(Vector2i(door_x + 1, cy), false)
 			_set_wall(Vector2i(cx, randi_range(2, cy - 2)), false)
 			_set_wall(Vector2i(cx, randi_range(cy + 2, ROWS - 3)), false)
-		4:  # The Gauntlet: long walls with gaps that alternate top and bottom
+		4:
 			var top := randf() < 0.5
 			for x in range(4, COLS - 3, 4):
 				var gap: int = randi_range(1, 3) if top else randi_range(ROWS - 5, ROWS - 3)
@@ -338,7 +320,7 @@ func _carve(kind: int) -> void:
 				if randf() < 0.3:
 					_set_wall(Vector2i(x, randi_range(1, ROWS - 2)), false)
 				top = not top
-		5:  # Ruins: broken wall pieces
+		5:
 			for i in randi_range(8, 11):
 				var c := Vector2i(randi_range(2, COLS - 3), randi_range(2, ROWS - 3))
 				var d: Vector2i = DIRS[randi() % 4]
@@ -363,8 +345,6 @@ func _fit_camera() -> void:
 	cam_base = Vector2(w * 0.5, h * 0.5 - (HUD_TOP - HUD_BOTTOM) * 0.5 / z)
 	cam.position = cam_base
 
-
-# --- spawning ----------------------------------------------------------------
 
 func _spawn_enemy(c: Vector2i, delay: float, kind: String = "") -> void:
 	if kind == "":
@@ -410,8 +390,6 @@ func _run_spawners(delta: float) -> void:
 		if powerups.size() < 2:
 			_spawn_powerup(_pick_cell(dist, 3))
 
-
-# --- rules -------------------------------------------------------------------
 
 func player_cell_changed() -> void:
 	_refresh_dist()
@@ -507,9 +485,6 @@ func player_attack(cells: Array, dmg: int, dir: Vector2i, all_round: bool) -> vo
 				break
 
 
-# The hero zips from from_pos back to the anchor: slimes on the line are cut,
-# a slime sitting on the anchor is thrown to where the hero was, and a full
-# charge adds a blast at both ends.
 func tether_strike(from_pos: Vector2, to_pos: Vector2, from_cell: Vector2i, to_cell: Vector2i, overcharged: bool) -> void:
 	var accent: Color = GameData.pal().accent
 	var swapped = enemy_at(to_cell)
@@ -559,8 +534,6 @@ func on_shield_break() -> void:
 	float_text(player.position, "BLOCKED", GameData.POWER_COLORS["shield"])
 
 
-# --- level flow --------------------------------------------------------------
-
 func _level_clear() -> void:
 	playing = false
 	var lvl: int = GameData.level
@@ -593,7 +566,7 @@ func toggle_pause() -> void:
 
 func _next_level() -> void:
 	GameData.level += 1
-	GameData.hp = min(GameData.max_hp, GameData.hp + 1)   # a little healing between levels
+	GameData.hp = min(GameData.max_hp, GameData.hp + 1)
 	get_tree().paused = false
 	get_tree().reload_current_scene()
 
@@ -608,8 +581,6 @@ func _to_menu() -> void:
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://menu.tscn")
 
-
-# --- effects -----------------------------------------------------------------
 
 func _fx(kind: String, pos: Vector2, color: Color, opts: Dictionary = {}) -> void:
 	var g = GFX.new()

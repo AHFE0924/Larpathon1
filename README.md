@@ -123,7 +123,6 @@ The full code for every script is below. Click a file name to open it.
 
 ```gdscript
 extends Node
-# Shared game state, colours, input setup and UI theme. Loaded as an autoload.
 
 const SAVE_PATH := "user://bb_save.cfg"
 const START_HP := 3
@@ -206,8 +205,6 @@ func _load() -> void:
 		best_level = int(cfg.get_value("best", "level", 0))
 
 
-# --- input -------------------------------------------------------------------
-
 func _setup_input() -> void:
 	_action("move_up", [KEY_W, KEY_UP])
 	_action("move_down", [KEY_S, KEY_DOWN])
@@ -228,10 +225,6 @@ func _action(action: String, keys: Array) -> void:
 		InputMap.action_add_event(action, ev)
 
 
-# --- art helpers -------------------------------------------------------------
-
-# Loads a picture. Some of the art (slimec.png) has a solid white background
-# instead of a transparent one, so that background is cut away here.
 func art(path: String) -> Texture2D:
 	if _art_cache.has(path):
 		return _art_cache[path]
@@ -248,8 +241,6 @@ func art(path: String) -> Texture2D:
 	return tex
 
 
-# Makes the background colour transparent, working inwards from the edges so
-# same-coloured details inside the drawing are kept.
 func _cut_background(img: Image) -> void:
 	var w := img.get_width()
 	var h := img.get_height()
@@ -277,9 +268,6 @@ func _cut_background(img: Image) -> void:
 		stack.append(p + Vector2i.DOWN)
 		stack.append(p + Vector2i.UP)
 
-# The sprite sheets have a lot of empty space around the character. This crops
-# the sprite to the drawn part, scales it to target_h pixels tall and puts its
-# feet foot_y pixels below the centre of the tile.
 func fit_sprite(sprite: Sprite2D, tex: Texture2D, target_h: float, foot_y: float) -> void:
 	var used := used_rect(tex)
 	sprite.texture = tex
@@ -307,7 +295,6 @@ func used_rect(tex: Texture2D) -> Rect2i:
 	return used
 
 
-# Recolours a sprite to one colour while keeping its light and dark areas.
 func tint_material(color: Color) -> ShaderMaterial:
 	if _tint_shader == null:
 		_tint_shader = Shader.new()
@@ -333,8 +320,6 @@ func heart_points(size: float, at: Vector2 = Vector2.ZERO) -> PackedVector2Array
 		pts.append(at + Vector2(x, y - 2.5) * size / 32.0)
 	return pts
 
-
-# --- UI theme ----------------------------------------------------------------
 
 func box(bg: Color, border: Color, border_w: int, radius: int, pad: int) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
@@ -372,12 +357,6 @@ func make_theme() -> Theme:
 	return th
 
 
-# --- dungeon stone frames ----------------------------------------------------
-
-# A panel or button drawn as a frame of carved stone blocks with a metal stud
-# in each corner. The frame is painted pixel by pixel into a tiny 16x16
-# picture, blown up 3x, and then tiled along the edges so any size works.
-# kind: "panel", "button", "hover" or "pressed". pad: space inside the frame.
 func stone_box(kind: String, pad: int) -> StyleBoxTexture:
 	var key := biome + kind
 	if not _stone_cache.has(key):
@@ -396,7 +375,7 @@ func _stone_texture(kind: String) -> ImageTexture:
 	var wall: Color = p.wall
 	var accent: Color = p.accent
 	var fill: Color = p.panel
-	var stone := wall.lerp(Color(0.42, 0.42, 0.46), 0.6)   # grey stone with a hint of the biome
+	var stone := wall.lerp(Color(0.42, 0.42, 0.46), 0.6)
 	var pressed := false
 	match kind:
 		"button":
@@ -409,7 +388,7 @@ func _stone_texture(kind: String) -> ImageTexture:
 			pressed = true
 	var light := stone.lightened(0.35)
 	var dark := stone.darkened(0.5)
-	if pressed:   # a pressed slab is lit from the other side
+	if pressed:
 		var swap := light
 		light = dark
 		dark = swap
@@ -417,7 +396,7 @@ func _stone_texture(kind: String) -> ImageTexture:
 	var img := Image.create(16, 16, false, Image.FORMAT_RGBA8)
 	for y in 16:
 		for x in 16:
-			var d: int = min(min(x, y), min(15 - x, 15 - y))   # how far in from the edge
+			var d: int = min(min(x, y), min(15 - x, 15 - y))
 			var c := fill
 			if d == 0:
 				var corner := (x == 0 or x == 15) and (y == 0 or y == 15)
@@ -431,7 +410,7 @@ func _stone_texture(kind: String) -> ImageTexture:
 			elif d == 3:
 				c = edge
 			if (d == 1 or d == 2) and (x == 7 or y == 7):
-				c = stone.darkened(0.5)   # the gap between two blocks
+				c = stone.darkened(0.5)
 			img.set_pixel(x, y, c)
 	var stud := accent.lerp(Color(0.8, 0.8, 0.8), 0.35)
 	for at in [Vector2i(2, 2), Vector2i(13, 2), Vector2i(2, 13), Vector2i(13, 13)]:
@@ -440,7 +419,6 @@ func _stone_texture(kind: String) -> ImageTexture:
 	return ImageTexture.create_from_image(img)
 
 
-# Fills a rectangle with a dim brick wall. `draw_on` is the node being drawn.
 func draw_bricks(draw_on: CanvasItem, area: Rect2) -> void:
 	var p := pal()
 	var base: Color = p.bg
@@ -461,11 +439,6 @@ func draw_bricks(draw_on: CanvasItem, area: Rect2) -> void:
 		row += 1
 
 
-# --- pixel font --------------------------------------------------------------
-
-# A hand-drawn 5x7 pixel font, built here at start-up so the text matches the
-# pixel art. Each glyph is 7 rows of 5 pixels ('#' = on). Lowercase letters
-# use the same shapes as capitals. Use sizes that are multiples of 8.
 const GLYPHS := {
 	" ": "...../...../...../...../...../...../.....",
 	"A": ".###./#...#/#...#/#####/#...#/#...#/#...#",
@@ -554,7 +527,7 @@ func pixel_font() -> FontFile:
 			f.set_glyph_size(0, size, code, Vector2(5, 7))
 			f.set_glyph_uv_rect(0, size, code, Rect2(i * 6, 0, 5, 7))
 			f.set_glyph_texture_idx(0, size, code, 0)
-	var fallback: Array[Font] = [ThemeDB.fallback_font]   # for characters not drawn above
+	var fallback: Array[Font] = [ThemeDB.fallback_font]
 	f.fallbacks = fallback
 	_pixel_font = f
 	return f
@@ -567,10 +540,6 @@ func pixel_font() -> FontFile:
 
 ```gdscript
 extends Node2D
-# Runs one level: builds a random map, scatters hazards, coins and slimes on
-# it, and applies the rules (damage, pickups, objective, level clear).
-#
-# Objective: collect every coin to open the portal, then step into it.
 
 const TILE := 32
 const COLS := 25
@@ -590,12 +559,12 @@ const Board := preload("res://board.gd")
 const GFX := preload("res://gfx.gd")
 const Hud := preload("res://hud.gd")
 
-var grid: Array = []          # grid[y][x]: 0 = floor, 1 = wall
-var hazards := {}             # cell -> hazard node
-var coins := {}               # cell -> coin node
-var powerups := {}            # cell -> power-up node
+var grid: Array = []
+var hazards := {}
+var coins := {}
+var powerups := {}
 var enemies: Array = []
-var dist := {}                # cell -> steps to the hero (slimes follow this)
+var dist := {}
 var player = null
 var portal = null
 var portal_cell := NO_CELL
@@ -608,7 +577,7 @@ var coins_got := 0
 var kills := 0
 var level_time := 0.0
 var freeze_time := 0.0
-var enemy_speed := 1.0        # multiplier on the wait between hops (lower = faster)
+var enemy_speed := 1.0
 var enemy_cap := 4
 var tough_chance := 0.0
 var goblin_chance := 0.0
@@ -630,7 +599,6 @@ var hud
 
 func _ready() -> void:
 	get_tree().paused = false
-	# Anything placed by hand in main.tscn is replaced by the generated level.
 	for c in get_children():
 		remove_child(c)
 		c.queue_free()
@@ -687,8 +655,6 @@ func _process(delta: float) -> void:
 	hud.refresh()
 
 
-# --- grid helpers ------------------------------------------------------------
-
 func cell_to_world(c: Vector2i) -> Vector2:
 	return Vector2(c.x * TILE + TILE * 0.5, c.y * TILE + TILE * 0.5)
 
@@ -717,7 +683,6 @@ func enemy_can_enter(c: Vector2i, me) -> bool:
 	return other == null or other == me
 
 
-# Steps from `start` to every tile that can be walked to.
 func _flood(start: Vector2i, avoid_hazards: bool) -> Dictionary:
 	var out := {start: 0}
 	var queue: Array = [start]
@@ -744,8 +709,6 @@ func _occupied(c: Vector2i) -> bool:
 	return enemy_at(c) != null
 
 
-# A random empty tile at least min_d steps away (per `field`). If nothing is
-# that far, the distance is relaxed until something is found.
 func _pick_cell(field: Dictionary, min_d: int) -> Vector2i:
 	var d := min_d
 	while d >= 1:
@@ -759,14 +722,11 @@ func _pick_cell(field: Dictionary, min_d: int) -> Vector2i:
 	return NO_CELL
 
 
-# --- level generation --------------------------------------------------------
-
 func _generate() -> void:
 	var lvl: int = GameData.level
 	var kind: int = (lvl - 1) % MAP_NAMES.size() if lvl <= MAP_NAMES.size() else randi() % MAP_NAMES.size()
 	map_name = MAP_NAMES[kind]
 
-	# Map: carve walls, pick a start, and make sure most of it is reachable.
 	var start := NO_CELL
 	var reach := {}
 	var ok := false
@@ -786,7 +746,7 @@ func _generate() -> void:
 	for y in ROWS:
 		for x in COLS:
 			if grid[y][x] == 0 and not reach.has(Vector2i(x, y)):
-				grid[y][x] = 1   # seal pockets nobody can get to
+				grid[y][x] = 1
 	board.queue_redraw()
 
 	player = PlayerScene.instantiate()
@@ -794,7 +754,6 @@ func _generate() -> void:
 	player.cell = start
 	actors.add_child(player)
 
-	# Hazards: random tiles, but never one that cuts part of the map off.
 	var hazard_n: int = min(3 + lvl, 14)
 	for i in hazard_n:
 		for attempt in 12:
@@ -813,7 +772,6 @@ func _generate() -> void:
 		hazards[c] = h
 	var field := _flood(start, true)
 
-	# Exit portal, far from the start.
 	portal_cell = _pick_cell(field, 14)
 	portal = GFX.new()
 	portal.kind = "portal"
@@ -821,7 +779,6 @@ func _generate() -> void:
 	portal.position = cell_to_world(portal_cell)
 	objects.add_child(portal)
 
-	# Coins.
 	coins_total = min(4 + lvl, 12)
 	for i in coins_total:
 		var c := _pick_cell(field, 2)
@@ -834,7 +791,6 @@ func _generate() -> void:
 		coins[c] = coin
 	coins_total = coins.size()
 
-	# Slimes.
 	enemy_cap = min(3 + lvl, 10)
 	enemy_speed = max(0.7, 1.0 - 0.03 * (lvl - 1))
 	tough_chance = 0.0 if lvl < 3 else min(0.5, 0.15 + 0.05 * (lvl - 3))
@@ -844,7 +800,6 @@ func _generate() -> void:
 	for i in min(1 + lvl, 8):
 		var c := _pick_cell(field, 7)
 		if c != NO_CELL:
-			# from level 2 on there is always at least one goblin
 			_spawn_enemy(c, 1.2, "goblin" if (i == 0 and lvl >= 2) else "")
 
 	if lvl >= 2:
@@ -863,13 +818,13 @@ func _carve(kind: int) -> void:
 	var cx := COLS / 2
 	var cy := ROWS / 2
 	match kind:
-		0:  # Open Field: a few scattered blocks
+		0:
 			for i in randi_range(6, 9):
 				var c := Vector2i(randi_range(2, COLS - 3), randi_range(2, ROWS - 3))
 				_set_wall(c, true)
 				if randf() < 0.5:
 					_set_wall(c + DIRS[randi() % 4], true)
-		1:  # The Pillars: a regular grid of pillars, some missing, some wider
+		1:
 			for x in range(4, COLS - 3, 4):
 				for y in range(3, ROWS - 2, 3):
 					if randf() < 0.15:
@@ -877,7 +832,7 @@ func _carve(kind: int) -> void:
 					_set_wall(Vector2i(x, y), true)
 					if randf() < 0.35:
 						_set_wall(Vector2i(x, y) + DIRS[randi() % 4], true)
-		2:  # Crossroads: a big cross with a gap in each arm
+		2:
 			for x in range(3, COLS - 3):
 				_set_wall(Vector2i(x, cy), true)
 			for y in range(2, ROWS - 2):
@@ -886,7 +841,7 @@ func _carve(kind: int) -> void:
 			_set_wall(Vector2i(randi_range(cx + 2, COLS - 5), cy), false)
 			_set_wall(Vector2i(cx, randi_range(2, cy - 2)), false)
 			_set_wall(Vector2i(cx, randi_range(cy + 2, ROWS - 3)), false)
-		3:  # Four Chambers: four rooms joined by doors
+		3:
 			for x in range(1, COLS - 1):
 				_set_wall(Vector2i(x, cy), true)
 			for y in range(1, ROWS - 1):
@@ -896,7 +851,7 @@ func _carve(kind: int) -> void:
 				_set_wall(Vector2i(door_x + 1, cy), false)
 			_set_wall(Vector2i(cx, randi_range(2, cy - 2)), false)
 			_set_wall(Vector2i(cx, randi_range(cy + 2, ROWS - 3)), false)
-		4:  # The Gauntlet: long walls with gaps that alternate top and bottom
+		4:
 			var top := randf() < 0.5
 			for x in range(4, COLS - 3, 4):
 				var gap: int = randi_range(1, 3) if top else randi_range(ROWS - 5, ROWS - 3)
@@ -906,7 +861,7 @@ func _carve(kind: int) -> void:
 				if randf() < 0.3:
 					_set_wall(Vector2i(x, randi_range(1, ROWS - 2)), false)
 				top = not top
-		5:  # Ruins: broken wall pieces
+		5:
 			for i in randi_range(8, 11):
 				var c := Vector2i(randi_range(2, COLS - 3), randi_range(2, ROWS - 3))
 				var d: Vector2i = DIRS[randi() % 4]
@@ -931,8 +886,6 @@ func _fit_camera() -> void:
 	cam_base = Vector2(w * 0.5, h * 0.5 - (HUD_TOP - HUD_BOTTOM) * 0.5 / z)
 	cam.position = cam_base
 
-
-# --- spawning ----------------------------------------------------------------
 
 func _spawn_enemy(c: Vector2i, delay: float, kind: String = "") -> void:
 	if kind == "":
@@ -978,8 +931,6 @@ func _run_spawners(delta: float) -> void:
 		if powerups.size() < 2:
 			_spawn_powerup(_pick_cell(dist, 3))
 
-
-# --- rules -------------------------------------------------------------------
 
 func player_cell_changed() -> void:
 	_refresh_dist()
@@ -1075,9 +1026,6 @@ func player_attack(cells: Array, dmg: int, dir: Vector2i, all_round: bool) -> vo
 				break
 
 
-# The hero zips from from_pos back to the anchor: slimes on the line are cut,
-# a slime sitting on the anchor is thrown to where the hero was, and a full
-# charge adds a blast at both ends.
 func tether_strike(from_pos: Vector2, to_pos: Vector2, from_cell: Vector2i, to_cell: Vector2i, overcharged: bool) -> void:
 	var accent: Color = GameData.pal().accent
 	var swapped = enemy_at(to_cell)
@@ -1127,8 +1075,6 @@ func on_shield_break() -> void:
 	float_text(player.position, "BLOCKED", GameData.POWER_COLORS["shield"])
 
 
-# --- level flow --------------------------------------------------------------
-
 func _level_clear() -> void:
 	playing = false
 	var lvl: int = GameData.level
@@ -1161,7 +1107,7 @@ func toggle_pause() -> void:
 
 func _next_level() -> void:
 	GameData.level += 1
-	GameData.hp = min(GameData.max_hp, GameData.hp + 1)   # a little healing between levels
+	GameData.hp = min(GameData.max_hp, GameData.hp + 1)
 	get_tree().paused = false
 	get_tree().reload_current_scene()
 
@@ -1176,8 +1122,6 @@ func _to_menu() -> void:
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://menu.tscn")
 
-
-# --- effects -----------------------------------------------------------------
 
 func _fx(kind: String, pos: Vector2, color: Color, opts: Dictionary = {}) -> void:
 	var g = GFX.new()
@@ -1216,7 +1160,6 @@ func float_text(pos: Vector2, text: String, color: Color) -> void:
 
 ```gdscript
 extends Node2D
-# Draws the floor and walls of the current level from main.gd's grid.
 
 var game = null
 
@@ -1228,7 +1171,6 @@ func _draw() -> void:
 	var t: int = game.TILE
 	var cols: int = game.COLS
 	var rows: int = game.ROWS
-	# dungeon brickwork behind and around the arena
 	GameData.draw_bricks(self, Rect2(-720, -480, cols * t + 1440, rows * t + 960))
 	draw_rect(Rect2(-6, -6, cols * t + 12, rows * t + 12), p.wall_dark)
 
@@ -1258,8 +1200,6 @@ func _draw() -> void:
 
 ```gdscript
 extends Area2D
-# The hero. Moves one tile at a time, slashes with the sword, and can drop an
-# anchor and zip back to it. main.gd (the "game") owns the level and the rules.
 
 const GFX := preload("res://gfx.gd")
 const MOVES := {
@@ -1268,7 +1208,7 @@ const MOVES := {
 }
 const CHARGE_COINS := 3
 
-@export var anchor_scene: PackedScene  # no longer used; kept so player.tscn loads cleanly
+@export var anchor_scene: PackedScene
 
 var game = null
 var cell := Vector2i.ZERO
@@ -1278,7 +1218,7 @@ var is_moving := false
 var dashing := false
 var alive := true
 
-var coins := 0                 # charge towards the blast
+var coins := 0
 var is_overcharged := false
 var invuln := 0.0
 var attack_cd := 0.0
@@ -1381,7 +1321,6 @@ func try_move(d: Vector2i) -> void:
 	var target := cell + d
 	is_moving = true
 	if game.is_wall(target):
-		# bump into the wall
 		var bump := create_tween()
 		bump.tween_property(self, "position", position + Vector2(d) * 4.0, 0.04)
 		bump.tween_property(self, "position", game.cell_to_world(cell), 0.05)
@@ -1403,7 +1342,6 @@ func _move_done() -> void:
 	game.player_arrived()
 
 
-# Pushed back off a hazard to the tile we came from.
 func bounce_back() -> void:
 	is_moving = true
 	cell = prev_cell
@@ -1447,7 +1385,6 @@ func tether() -> void:
 	if anchor_cell == cell:
 		_clear_anchor()
 		return
-	# Zip back to the anchor.
 	is_moving = true
 	dashing = true
 	var from_cell := cell
@@ -1478,7 +1415,6 @@ func _clear_anchor() -> void:
 	active_anchor = null
 
 
-# Returns true when this coin filled the charge.
 func add_charge() -> bool:
 	if is_overcharged:
 		return false
@@ -1489,7 +1425,6 @@ func add_charge() -> bool:
 	return false
 
 
-# Returns true if the hit landed (it does not while blinking or dashing).
 func take_damage(amount: int) -> bool:
 	if not alive or invuln > 0.0 or dashing:
 		return false
@@ -1515,12 +1450,6 @@ func take_damage(amount: int) -> bool:
 
 ```gdscript
 extends Area2D
-# An enemy. All of them hop one tile at a time along the shortest path to the
-# hero. There are three kinds:
-#   "slime"  - one hit
-#   "big"    - a big slime, two hits, a bit slower
-#   "goblin" - two hits; when it lines up with the hero it winds up (flashes
-#              red and shakes) and then charges several tiles in a straight line
 
 const DIRS: Array[Vector2i] = [Vector2i.RIGHT, Vector2i.LEFT, Vector2i.DOWN, Vector2i.UP]
 const CHARGE_RANGE := 5
@@ -1528,7 +1457,7 @@ const CHARGE_RANGE := 5
 var game = null
 var cell := Vector2i.ZERO
 var kind := "slime"
-var tough := false          # true for big slimes (used for scoring)
+var tough := false
 var hp := 1
 var stun := 0.0
 var spawn_t := 0.0
@@ -1620,7 +1549,7 @@ func _physics_process(delta: float) -> void:
 		return
 
 	if kind == "goblin":
-		sprite.flip_h = game.player.position.x > position.x   # the goblin art faces left
+		sprite.flip_h = game.player.position.x > position.x
 		charge_cd = max(0.0, charge_cd - delta)
 		if windup > 0.0:
 			windup -= delta
@@ -1666,13 +1595,11 @@ func _step() -> void:
 			return
 		best = options[randi() % options.size()]
 	elif randf() < 0.12:
-		best = options[randi() % options.size()]  # wander a little so they don't all line up
+		best = options[randi() % options.size()]
 	scale = Vector2(1.25, 0.75)
 	_go(cell + best, 0.14)
 
 
-# True when the hero is in the same row or column, 2 to CHARGE_RANGE tiles
-# away, with nothing in between.
 func _can_charge() -> bool:
 	var dv: Vector2i = game.player.cell - cell
 	if dv == Vector2i.ZERO or (dv.x != 0 and dv.y != 0):
@@ -1700,7 +1627,7 @@ func _charge() -> void:
 			break
 	if steps == 0:
 		return
-	stun = 0.05 * steps + 0.4   # catches its breath after the charge
+	stun = 0.05 * steps + 0.4
 	scale = Vector2(1.3, 0.8)
 	_go(target, 0.05 * steps)
 
@@ -1725,7 +1652,6 @@ func _cancel_windup() -> void:
 	sprite.position = sprite_home
 
 
-# knock is the direction the hit pushes the enemy (ZERO for no push).
 func hit(dmg: int, knock: Vector2i) -> void:
 	if dead:
 		return
@@ -1733,7 +1659,7 @@ func hit(dmg: int, knock: Vector2i) -> void:
 	_cancel_windup()
 	if knock != Vector2i.ZERO and game.is_hazard(cell + knock):
 		stun = 1.0
-		_go(cell + knock, 0.1)  # knocked into a pit: it dies when it lands
+		_go(cell + knock, 0.1)
 		return
 	hp -= dmg
 	if hp <= 0:
@@ -1744,7 +1670,6 @@ func hit(dmg: int, knock: Vector2i) -> void:
 		_go(cell + knock, 0.1)
 
 
-# Pushed off the hero after touching them.
 func shove_from(from: Vector2i) -> void:
 	stun = 0.7
 	_cancel_windup()
@@ -1762,7 +1687,6 @@ func shove_from(from: Vector2i) -> void:
 			return
 
 
-# Thrown to another tile by the tether swap.
 func relocate(to: Vector2i) -> void:
 	stun = 1.5
 	_cancel_windup()
@@ -1790,7 +1714,6 @@ func die(by_hazard: bool) -> void:
 
 ```gdscript
 extends Area2D
-# A spinning coin. main.gd handles picking it up.
 
 var cell := Vector2i.ZERO
 var t := randf() * TAU
@@ -1833,8 +1756,6 @@ func collect() -> void:
 
 ```gdscript
 extends Area2D
-# A pit with a flame on it. main.gd checks who is standing on it; this script
-# only draws it.
 
 var cell := Vector2i.ZERO
 var t := randf() * TAU
@@ -1872,7 +1793,6 @@ func _draw() -> void:
 	draw_rect(Rect2(-15, -15, 30, 30), Color(p.hazard, 0.55 + 0.3 * glow), false, 2.0)
 
 
-# hazard.tscn still connects this signal, so keep the method.
 func _on_area_entered(_area: Area2D) -> void:
 	pass
 ```
@@ -1884,8 +1804,6 @@ func _on_area_entered(_area: Area2D) -> void:
 
 ```gdscript
 extends Node2D
-# Small shapes drawn in code: the anchor, the exit portal, power-ups and the
-# short-lived effects (rings, bursts, sword slashes).
 
 const ONE_SHOT := ["ring", "burst", "slash"]
 
@@ -1984,8 +1902,6 @@ func _glyph() -> void:
 
 ```gdscript
 extends CanvasLayer
-# In-game interface: top bar (hearts, level, objective, charge, power-ups,
-# score), control hints, pop-up banners, and the pause / clear / game-over box.
 
 var game = null
 var root: Control
@@ -2013,7 +1929,7 @@ func _ready() -> void:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.theme = GameData.make_theme()
-	root.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST   # keeps the pixel font crisp
+	root.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_child(root)
 	_build_bar()
 	_build_hint()
@@ -2077,7 +1993,6 @@ func _build_bar() -> void:
 	score_label = _label("", 16)
 	row.add_child(score_label)
 
-	# Active power-ups sit in their own row just under the bar.
 	var chip_row := HBoxContainer.new()
 	chip_row.alignment = BoxContainer.ALIGNMENT_END
 	chip_row.add_theme_constant_override("separation", 18)
@@ -2155,8 +2070,6 @@ func _build_overlay() -> void:
 	col.add_child(overlay_buttons)
 
 
-# --- drawing -----------------------------------------------------------------
-
 func _draw_hearts() -> void:
 	for i in GameData.max_hp:
 		var pts := GameData.heart_points(22.0, Vector2(13 + i * 26, 14))
@@ -2177,8 +2090,6 @@ func _draw_pips() -> void:
 			pips.draw_circle(c, 6.5, Color(0, 0, 0, 0.45))
 		pips.draw_arc(c, 6.5, 0.0, TAU, 20, Color(gold, 0.9 if i < filled else 0.35), 1.5, true)
 
-
-# --- updates -----------------------------------------------------------------
 
 func refresh() -> void:
 	var pl = game.player
@@ -2220,8 +2131,6 @@ func show_banner(title: String, sub: String, secs: float) -> void:
 	banner_tw.tween_callback(banner.hide)
 
 
-# buttons: [[text, callable], ...]. The first one gets keyboard focus after a
-# short delay, so a key that was being mashed doesn't press it by accident.
 func show_overlay(title: String, body: String, buttons: Array) -> void:
 	overlay_title.text = title
 	overlay_body.text = body
@@ -2256,7 +2165,6 @@ func hide_overlay() -> void:
 
 ```gdscript
 extends Control
-# Title screen: pick a biome, read the rules, press Play.
 
 var bg: ColorRect
 var title: Label
@@ -2268,11 +2176,11 @@ var time := 0.0
 
 func _ready() -> void:
 	get_tree().paused = false
-	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST   # keeps the pixel font crisp
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	bg = ColorRect.new()
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
-	wall = Control.new()   # brick wall, drawn in code
+	wall = Control.new()
 	wall.set_anchors_preset(Control.PRESET_FULL_RECT)
 	wall.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	wall.draw.connect(func(): GameData.draw_bricks(wall, Rect2(Vector2.ZERO, wall.size)))
@@ -2334,7 +2242,6 @@ func _process(delta: float) -> void:
 		t.queue_redraw()
 
 
-# A wall torch with a flickering flame, drawn in chunky 4-pixel blocks.
 func _torch() -> Control:
 	var t := Control.new()
 	t.custom_minimum_size = Vector2(36, 84)
@@ -2350,14 +2257,12 @@ func _draw_torch(t: Control, offset: float) -> void:
 	var flame: Color = p.hazard
 	var u := 4.0
 	var mid := 18.0
-	var step: float = floor(time * 9.0) + offset  # jumps 9 times a second, like sprite frames
+	var step: float = floor(time * 9.0) + offset
 	t.draw_circle(Vector2(mid, 30), 30.0 + sin(step) * 2.0, Color(flame, 0.07))
-	# handle and iron cup
 	t.draw_rect(Rect2(mid - u, 48, u * 2, 32), Color("5a3a22"))
 	t.draw_rect(Rect2(mid - u, 48, u, 32), Color("7a5232"))
 	t.draw_rect(Rect2(mid - u * 3, 40, u * 6, u * 2), Color("3a3a40"))
 	t.draw_rect(Rect2(mid - u * 3, 40, u * 6, u), Color("5c5c66"))
-	# flame: five columns of blocks whose heights wobble
 	var heights := [2, 4, 6, 4, 2]
 	for i in 5:
 		var h: int = heights[i] + int(round(sin(step * 1.7 + i * 2.1)))
@@ -2377,7 +2282,6 @@ func _label(text: String, size: int, alpha: float = 1.0) -> Label:
 	return l
 
 
-# A big toggle button showing the hero for that biome.
 func _card(biome: String, heading: String, blurb: String, group: ButtonGroup) -> Button:
 	var p: Dictionary = GameData.PALETTES[biome]
 	var b := Button.new()

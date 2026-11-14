@@ -1,6 +1,4 @@
 extends CanvasLayer
-# In-game interface: top bar (hearts, level, objective, charge, power-ups,
-# score), control hints, pop-up banners, and the pause / clear / game-over box.
 
 var game = null
 var root: Control
@@ -28,7 +26,7 @@ func _ready() -> void:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.theme = GameData.make_theme()
-	root.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST   # keeps the pixel font crisp
+	root.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_child(root)
 	_build_bar()
 	_build_hint()
@@ -92,7 +90,6 @@ func _build_bar() -> void:
 	score_label = _label("", 16)
 	row.add_child(score_label)
 
-	# Active power-ups sit in their own row just under the bar.
 	var chip_row := HBoxContainer.new()
 	chip_row.alignment = BoxContainer.ALIGNMENT_END
 	chip_row.add_theme_constant_override("separation", 18)
@@ -170,8 +167,6 @@ func _build_overlay() -> void:
 	col.add_child(overlay_buttons)
 
 
-# --- drawing -----------------------------------------------------------------
-
 func _draw_hearts() -> void:
 	for i in GameData.max_hp:
 		var pts := GameData.heart_points(22.0, Vector2(13 + i * 26, 14))
@@ -192,8 +187,6 @@ func _draw_pips() -> void:
 			pips.draw_circle(c, 6.5, Color(0, 0, 0, 0.45))
 		pips.draw_arc(c, 6.5, 0.0, TAU, 20, Color(gold, 0.9 if i < filled else 0.35), 1.5, true)
 
-
-# --- updates -----------------------------------------------------------------
 
 func refresh() -> void:
 	var pl = game.player
@@ -235,8 +228,6 @@ func show_banner(title: String, sub: String, secs: float) -> void:
 	banner_tw.tween_callback(banner.hide)
 
 
-# buttons: [[text, callable], ...]. The first one gets keyboard focus after a
-# short delay, so a key that was being mashed doesn't press it by accident.
 func show_overlay(title: String, body: String, buttons: Array) -> void:
 	overlay_title.text = title
 	overlay_body.text = body

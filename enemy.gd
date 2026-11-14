@@ -1,10 +1,4 @@
 extends Area2D
-# An enemy. All of them hop one tile at a time along the shortest path to the
-# hero. There are three kinds:
-#   "slime"  - one hit
-#   "big"    - a big slime, two hits, a bit slower
-#   "goblin" - two hits; when it lines up with the hero it winds up (flashes
-#              red and shakes) and then charges several tiles in a straight line
 
 const DIRS: Array[Vector2i] = [Vector2i.RIGHT, Vector2i.LEFT, Vector2i.DOWN, Vector2i.UP]
 const CHARGE_RANGE := 5
@@ -12,7 +6,7 @@ const CHARGE_RANGE := 5
 var game = null
 var cell := Vector2i.ZERO
 var kind := "slime"
-var tough := false          # true for big slimes (used for scoring)
+var tough := false
 var hp := 1
 var stun := 0.0
 var spawn_t := 0.0
@@ -104,7 +98,7 @@ func _physics_process(delta: float) -> void:
 		return
 
 	if kind == "goblin":
-		sprite.flip_h = game.player.position.x > position.x   # the goblin art faces left
+		sprite.flip_h = game.player.position.x > position.x
 		charge_cd = max(0.0, charge_cd - delta)
 		if windup > 0.0:
 			windup -= delta
@@ -150,13 +144,11 @@ func _step() -> void:
 			return
 		best = options[randi() % options.size()]
 	elif randf() < 0.12:
-		best = options[randi() % options.size()]  # wander a little so they don't all line up
+		best = options[randi() % options.size()]
 	scale = Vector2(1.25, 0.75)
 	_go(cell + best, 0.14)
 
 
-# True when the hero is in the same row or column, 2 to CHARGE_RANGE tiles
-# away, with nothing in between.
 func _can_charge() -> bool:
 	var dv: Vector2i = game.player.cell - cell
 	if dv == Vector2i.ZERO or (dv.x != 0 and dv.y != 0):
@@ -184,7 +176,7 @@ func _charge() -> void:
 			break
 	if steps == 0:
 		return
-	stun = 0.05 * steps + 0.4   # catches its breath after the charge
+	stun = 0.05 * steps + 0.4
 	scale = Vector2(1.3, 0.8)
 	_go(target, 0.05 * steps)
 
@@ -209,7 +201,6 @@ func _cancel_windup() -> void:
 	sprite.position = sprite_home
 
 
-# knock is the direction the hit pushes the enemy (ZERO for no push).
 func hit(dmg: int, knock: Vector2i) -> void:
 	if dead:
 		return
@@ -217,7 +208,7 @@ func hit(dmg: int, knock: Vector2i) -> void:
 	_cancel_windup()
 	if knock != Vector2i.ZERO and game.is_hazard(cell + knock):
 		stun = 1.0
-		_go(cell + knock, 0.1)  # knocked into a pit: it dies when it lands
+		_go(cell + knock, 0.1)
 		return
 	hp -= dmg
 	if hp <= 0:
@@ -228,7 +219,6 @@ func hit(dmg: int, knock: Vector2i) -> void:
 		_go(cell + knock, 0.1)
 
 
-# Pushed off the hero after touching them.
 func shove_from(from: Vector2i) -> void:
 	stun = 0.7
 	_cancel_windup()
@@ -246,7 +236,6 @@ func shove_from(from: Vector2i) -> void:
 			return
 
 
-# Thrown to another tile by the tether swap.
 func relocate(to: Vector2i) -> void:
 	stun = 1.5
 	_cancel_windup()

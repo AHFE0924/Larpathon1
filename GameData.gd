@@ -1,5 +1,4 @@
 extends Node
-# Shared game state, colours, input setup and UI theme. Loaded as an autoload.
 
 const SAVE_PATH := "user://bb_save.cfg"
 const START_HP := 3
@@ -82,8 +81,6 @@ func _load() -> void:
 		best_level = int(cfg.get_value("best", "level", 0))
 
 
-# --- input -------------------------------------------------------------------
-
 func _setup_input() -> void:
 	_action("move_up", [KEY_W, KEY_UP])
 	_action("move_down", [KEY_S, KEY_DOWN])
@@ -104,10 +101,6 @@ func _action(action: String, keys: Array) -> void:
 		InputMap.action_add_event(action, ev)
 
 
-# --- art helpers -------------------------------------------------------------
-
-# Loads a picture. Some of the art (slimec.png) has a solid white background
-# instead of a transparent one, so that background is cut away here.
 func art(path: String) -> Texture2D:
 	if _art_cache.has(path):
 		return _art_cache[path]
@@ -124,8 +117,6 @@ func art(path: String) -> Texture2D:
 	return tex
 
 
-# Makes the background colour transparent, working inwards from the edges so
-# same-coloured details inside the drawing are kept.
 func _cut_background(img: Image) -> void:
 	var w := img.get_width()
 	var h := img.get_height()
@@ -153,9 +144,6 @@ func _cut_background(img: Image) -> void:
 		stack.append(p + Vector2i.DOWN)
 		stack.append(p + Vector2i.UP)
 
-# The sprite sheets have a lot of empty space around the character. This crops
-# the sprite to the drawn part, scales it to target_h pixels tall and puts its
-# feet foot_y pixels below the centre of the tile.
 func fit_sprite(sprite: Sprite2D, tex: Texture2D, target_h: float, foot_y: float) -> void:
 	var used := used_rect(tex)
 	sprite.texture = tex
@@ -183,7 +171,6 @@ func used_rect(tex: Texture2D) -> Rect2i:
 	return used
 
 
-# Recolours a sprite to one colour while keeping its light and dark areas.
 func tint_material(color: Color) -> ShaderMaterial:
 	if _tint_shader == null:
 		_tint_shader = Shader.new()
@@ -209,8 +196,6 @@ func heart_points(size: float, at: Vector2 = Vector2.ZERO) -> PackedVector2Array
 		pts.append(at + Vector2(x, y - 2.5) * size / 32.0)
 	return pts
 
-
-# --- UI theme ----------------------------------------------------------------
 
 func box(bg: Color, border: Color, border_w: int, radius: int, pad: int) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
@@ -248,12 +233,6 @@ func make_theme() -> Theme:
 	return th
 
 
-# --- dungeon stone frames ----------------------------------------------------
-
-# A panel or button drawn as a frame of carved stone blocks with a metal stud
-# in each corner. The frame is painted pixel by pixel into a tiny 16x16
-# picture, blown up 3x, and then tiled along the edges so any size works.
-# kind: "panel", "button", "hover" or "pressed". pad: space inside the frame.
 func stone_box(kind: String, pad: int) -> StyleBoxTexture:
 	var key := biome + kind
 	if not _stone_cache.has(key):
@@ -272,7 +251,7 @@ func _stone_texture(kind: String) -> ImageTexture:
 	var wall: Color = p.wall
 	var accent: Color = p.accent
 	var fill: Color = p.panel
-	var stone := wall.lerp(Color(0.42, 0.42, 0.46), 0.6)   # grey stone with a hint of the biome
+	var stone := wall.lerp(Color(0.42, 0.42, 0.46), 0.6)
 	var pressed := false
 	match kind:
 		"button":
@@ -285,7 +264,7 @@ func _stone_texture(kind: String) -> ImageTexture:
 			pressed = true
 	var light := stone.lightened(0.35)
 	var dark := stone.darkened(0.5)
-	if pressed:   # a pressed slab is lit from the other side
+	if pressed:
 		var swap := light
 		light = dark
 		dark = swap
@@ -293,7 +272,7 @@ func _stone_texture(kind: String) -> ImageTexture:
 	var img := Image.create(16, 16, false, Image.FORMAT_RGBA8)
 	for y in 16:
 		for x in 16:
-			var d: int = min(min(x, y), min(15 - x, 15 - y))   # how far in from the edge
+			var d: int = min(min(x, y), min(15 - x, 15 - y))
 			var c := fill
 			if d == 0:
 				var corner := (x == 0 or x == 15) and (y == 0 or y == 15)
@@ -307,7 +286,7 @@ func _stone_texture(kind: String) -> ImageTexture:
 			elif d == 3:
 				c = edge
 			if (d == 1 or d == 2) and (x == 7 or y == 7):
-				c = stone.darkened(0.5)   # the gap between two blocks
+				c = stone.darkened(0.5)
 			img.set_pixel(x, y, c)
 	var stud := accent.lerp(Color(0.8, 0.8, 0.8), 0.35)
 	for at in [Vector2i(2, 2), Vector2i(13, 2), Vector2i(2, 13), Vector2i(13, 13)]:
@@ -316,7 +295,6 @@ func _stone_texture(kind: String) -> ImageTexture:
 	return ImageTexture.create_from_image(img)
 
 
-# Fills a rectangle with a dim brick wall. `draw_on` is the node being drawn.
 func draw_bricks(draw_on: CanvasItem, area: Rect2) -> void:
 	var p := pal()
 	var base: Color = p.bg
@@ -337,11 +315,6 @@ func draw_bricks(draw_on: CanvasItem, area: Rect2) -> void:
 		row += 1
 
 
-# --- pixel font --------------------------------------------------------------
-
-# A hand-drawn 5x7 pixel font, built here at start-up so the text matches the
-# pixel art. Each glyph is 7 rows of 5 pixels ('#' = on). Lowercase letters
-# use the same shapes as capitals. Use sizes that are multiples of 8.
 const GLYPHS := {
 	" ": "...../...../...../...../...../...../.....",
 	"A": ".###./#...#/#...#/#####/#...#/#...#/#...#",
@@ -430,7 +403,7 @@ func pixel_font() -> FontFile:
 			f.set_glyph_size(0, size, code, Vector2(5, 7))
 			f.set_glyph_uv_rect(0, size, code, Rect2(i * 6, 0, 5, 7))
 			f.set_glyph_texture_idx(0, size, code, 0)
-	var fallback: Array[Font] = [ThemeDB.fallback_font]   # for characters not drawn above
+	var fallback: Array[Font] = [ThemeDB.fallback_font]
 	f.fallbacks = fallback
 	_pixel_font = f
 	return f

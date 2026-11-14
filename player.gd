@@ -1,6 +1,4 @@
 extends Area2D
-# The hero. Moves one tile at a time, slashes with the sword, and can drop an
-# anchor and zip back to it. main.gd (the "game") owns the level and the rules.
 
 const GFX := preload("res://gfx.gd")
 const MOVES := {
@@ -9,7 +7,7 @@ const MOVES := {
 }
 const CHARGE_COINS := 3
 
-@export var anchor_scene: PackedScene  # no longer used; kept so player.tscn loads cleanly
+@export var anchor_scene: PackedScene
 
 var game = null
 var cell := Vector2i.ZERO
@@ -19,7 +17,7 @@ var is_moving := false
 var dashing := false
 var alive := true
 
-var coins := 0                 # charge towards the blast
+var coins := 0
 var is_overcharged := false
 var invuln := 0.0
 var attack_cd := 0.0
@@ -122,7 +120,6 @@ func try_move(d: Vector2i) -> void:
 	var target := cell + d
 	is_moving = true
 	if game.is_wall(target):
-		# bump into the wall
 		var bump := create_tween()
 		bump.tween_property(self, "position", position + Vector2(d) * 4.0, 0.04)
 		bump.tween_property(self, "position", game.cell_to_world(cell), 0.05)
@@ -144,7 +141,6 @@ func _move_done() -> void:
 	game.player_arrived()
 
 
-# Pushed back off a hazard to the tile we came from.
 func bounce_back() -> void:
 	is_moving = true
 	cell = prev_cell
@@ -188,7 +184,6 @@ func tether() -> void:
 	if anchor_cell == cell:
 		_clear_anchor()
 		return
-	# Zip back to the anchor.
 	is_moving = true
 	dashing = true
 	var from_cell := cell
@@ -219,7 +214,6 @@ func _clear_anchor() -> void:
 	active_anchor = null
 
 
-# Returns true when this coin filled the charge.
 func add_charge() -> bool:
 	if is_overcharged:
 		return false
@@ -230,7 +224,6 @@ func add_charge() -> bool:
 	return false
 
 
-# Returns true if the hit landed (it does not while blinking or dashing).
 func take_damage(amount: int) -> bool:
 	if not alive or invuln > 0.0 or dashing:
 		return false

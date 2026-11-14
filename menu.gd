@@ -1,5 +1,4 @@
 extends Control
-# Title screen: pick a biome, read the rules, press Play.
 
 var bg: ColorRect
 var title: Label
@@ -11,11 +10,11 @@ var time := 0.0
 
 func _ready() -> void:
 	get_tree().paused = false
-	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST   # keeps the pixel font crisp
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	bg = ColorRect.new()
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
-	wall = Control.new()   # brick wall, drawn in code
+	wall = Control.new()
 	wall.set_anchors_preset(Control.PRESET_FULL_RECT)
 	wall.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	wall.draw.connect(func(): GameData.draw_bricks(wall, Rect2(Vector2.ZERO, wall.size)))
@@ -77,7 +76,6 @@ func _process(delta: float) -> void:
 		t.queue_redraw()
 
 
-# A wall torch with a flickering flame, drawn in chunky 4-pixel blocks.
 func _torch() -> Control:
 	var t := Control.new()
 	t.custom_minimum_size = Vector2(36, 84)
@@ -93,14 +91,12 @@ func _draw_torch(t: Control, offset: float) -> void:
 	var flame: Color = p.hazard
 	var u := 4.0
 	var mid := 18.0
-	var step: float = floor(time * 9.0) + offset  # jumps 9 times a second, like sprite frames
+	var step: float = floor(time * 9.0) + offset
 	t.draw_circle(Vector2(mid, 30), 30.0 + sin(step) * 2.0, Color(flame, 0.07))
-	# handle and iron cup
 	t.draw_rect(Rect2(mid - u, 48, u * 2, 32), Color("5a3a22"))
 	t.draw_rect(Rect2(mid - u, 48, u, 32), Color("7a5232"))
 	t.draw_rect(Rect2(mid - u * 3, 40, u * 6, u * 2), Color("3a3a40"))
 	t.draw_rect(Rect2(mid - u * 3, 40, u * 6, u), Color("5c5c66"))
-	# flame: five columns of blocks whose heights wobble
 	var heights := [2, 4, 6, 4, 2]
 	for i in 5:
 		var h: int = heights[i] + int(round(sin(step * 1.7 + i * 2.1)))
@@ -120,7 +116,6 @@ func _label(text: String, size: int, alpha: float = 1.0) -> Label:
 	return l
 
 
-# A big toggle button showing the hero for that biome.
 func _card(biome: String, heading: String, blurb: String, group: ButtonGroup) -> Button:
 	var p: Dictionary = GameData.PALETTES[biome]
 	var b := Button.new()

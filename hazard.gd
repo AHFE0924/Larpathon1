@@ -1,6 +1,4 @@
 extends Area2D
-# A pit with a flame on it. main.gd checks who is standing on it; this script
-# only draws it.
 
 var cell := Vector2i.ZERO
 var t := randf() * TAU
@@ -38,6 +36,5 @@ func _draw() -> void:
 	draw_rect(Rect2(-15, -15, 30, 30), Color(p.hazard, 0.55 + 0.3 * glow), false, 2.0)
 
 
-# hazard.tscn still connects this signal, so keep the method.
 func _on_area_entered(_area: Area2D) -> void:
 	pass

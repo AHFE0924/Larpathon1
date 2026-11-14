@@ -1,5 +1,4 @@
 extends Area2D
-# A spinning coin. main.gd handles picking it up.
 
 var cell := Vector2i.ZERO
 var t := randf() * TAU
