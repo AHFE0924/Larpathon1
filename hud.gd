@@ -61,10 +61,10 @@ func _spacer() -> Control:
 func _build_bar() -> void:
 	var p := GameData.pal()
 	var bar := PanelContainer.new()
-	bar.add_theme_stylebox_override("panel", GameData.box(Color(p.panel, 0.96), p.accent.darkened(0.25), 3, 0, 10))
+	bar.add_theme_stylebox_override("panel", GameData.stone_box("panel", 2))
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(bar)
-	bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE, Control.PRESET_MODE_MINSIZE, 10)
+	bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE, Control.PRESET_MODE_MINSIZE, 6)
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
@@ -99,8 +99,8 @@ func _build_bar() -> void:
 	chip_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(chip_row)
 	chip_row.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	chip_row.offset_top = 66
-	chip_row.offset_bottom = 66
+	chip_row.offset_top = 68
+	chip_row.offset_bottom = 68
 	chip_row.offset_right = -26
 	for type in ["shield", "haste", "fury", "freeze"]:
 		var chip := _label("", 16, GameData.POWER_COLORS[type])
@@ -154,7 +154,7 @@ func _build_overlay() -> void:
 	overlay.add_child(center)
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(400, 0)
-	panel.add_theme_stylebox_override("panel", GameData.box(GameData.pal().panel, GameData.pal().accent, 4, 0, 28))
+	panel.add_theme_stylebox_override("panel", GameData.stone_box("panel", 16))
 	center.add_child(panel)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 16)

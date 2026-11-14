@@ -44,6 +44,7 @@ var POWER_NAMES := {
 
 var _used_cache := {}
 var _art_cache := {}
+var _stone_cache := {}
 var _tint_shader: Shader
 
 
@@ -232,11 +233,11 @@ func make_theme() -> Theme:
 	th.set_constant("shadow_offset_x", "Label", 2)
 	th.set_constant("shadow_offset_y", "Label", 2)
 	th.set_constant("line_spacing", "Label", 6)
-	th.set_stylebox("panel", "PanelContainer", box(Color(p.panel, 0.96), accent.darkened(0.25), 3, 0, 14))
-	th.set_stylebox("normal", "Button", box(p.panel_hi, accent.darkened(0.3), 3, 0, 12))
-	th.set_stylebox("hover", "Button", box(p.panel_hi.lightened(0.12), accent, 3, 0, 12))
-	th.set_stylebox("pressed", "Button", box(accent.darkened(0.35), accent.lightened(0.35), 3, 0, 12))
-	var focus := box(Color(0, 0, 0, 0), Color.WHITE, 3, 0, 12)
+	th.set_stylebox("panel", "PanelContainer", stone_box("panel", 8))
+	th.set_stylebox("normal", "Button", stone_box("button", 4))
+	th.set_stylebox("hover", "Button", stone_box("hover", 4))
+	th.set_stylebox("pressed", "Button", stone_box("pressed", 4))
+	var focus := box(Color(0, 0, 0, 0), accent.lightened(0.4), 3, 0, 12)
 	focus.draw_center = false
 	th.set_stylebox("focus", "Button", focus)
 	th.set_color("font_color", "Button", p.text)
@@ -245,6 +246,95 @@ func make_theme() -> Theme:
 	th.set_color("font_focus_color", "Button", Color.WHITE)
 	th.set_font_size("font_size", "Button", 16)
 	return th
+
+
+# --- dungeon stone frames ----------------------------------------------------
+
+# A panel or button drawn as a frame of carved stone blocks with a metal stud
+# in each corner. The frame is painted pixel by pixel into a tiny 16x16
+# picture, blown up 3x, and then tiled along the edges so any size works.
+# kind: "panel", "button", "hover" or "pressed". pad: space inside the frame.
+func stone_box(kind: String, pad: int) -> StyleBoxTexture:
+	var key := biome + kind
+	if not _stone_cache.has(key):
+		_stone_cache[key] = _stone_texture(kind)
+	var sb := StyleBoxTexture.new()
+	sb.texture = _stone_cache[key]
+	sb.set_texture_margin_all(12)
+	sb.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
+	sb.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
+	sb.set_content_margin_all(12 + pad)
+	return sb
+
+
+func _stone_texture(kind: String) -> ImageTexture:
+	var p := pal()
+	var wall: Color = p.wall
+	var accent: Color = p.accent
+	var fill: Color = p.panel
+	var stone := wall.lerp(Color(0.42, 0.42, 0.46), 0.6)   # grey stone with a hint of the biome
+	var pressed := false
+	match kind:
+		"button":
+			fill = p.panel_hi
+		"hover":
+			fill = (p.panel_hi as Color).lightened(0.12)
+			stone = stone.lightened(0.15)
+		"pressed":
+			fill = accent.darkened(0.5)
+			pressed = true
+	var light := stone.lightened(0.35)
+	var dark := stone.darkened(0.5)
+	if pressed:   # a pressed slab is lit from the other side
+		var swap := light
+		light = dark
+		dark = swap
+	var edge := Color(0.05, 0.04, 0.04)
+	var img := Image.create(16, 16, false, Image.FORMAT_RGBA8)
+	for y in 16:
+		for x in 16:
+			var d: int = min(min(x, y), min(15 - x, 15 - y))   # how far in from the edge
+			var c := fill
+			if d == 0:
+				var corner := (x == 0 or x == 15) and (y == 0 or y == 15)
+				c = Color(0, 0, 0, 0) if corner else edge
+			elif d == 1:
+				var top_left := x == 1 or y == 1
+				var bottom_right := x == 14 or y == 14
+				c = stone if (top_left and bottom_right) else (light if top_left else dark)
+			elif d == 2:
+				c = stone.darkened(0.12) if (x * 7 + y * 13) % 5 == 0 else stone
+			elif d == 3:
+				c = edge
+			if (d == 1 or d == 2) and (x == 7 or y == 7):
+				c = stone.darkened(0.5)   # the gap between two blocks
+			img.set_pixel(x, y, c)
+	var stud := accent.lerp(Color(0.8, 0.8, 0.8), 0.35)
+	for at in [Vector2i(2, 2), Vector2i(13, 2), Vector2i(2, 13), Vector2i(13, 13)]:
+		img.set_pixel(at.x, at.y, stud)
+	img.resize(48, 48, Image.INTERPOLATE_NEAREST)
+	return ImageTexture.create_from_image(img)
+
+
+# Fills a rectangle with a dim brick wall. `draw_on` is the node being drawn.
+func draw_bricks(draw_on: CanvasItem, area: Rect2) -> void:
+	var p := pal()
+	var base: Color = p.bg
+	var mortar := base.darkened(0.45)
+	draw_on.draw_rect(area, mortar)
+	var row := 0
+	var y := area.position.y
+	while y < area.end.y:
+		var x := area.position.x - (24.0 if row % 2 == 1 else 0.0)
+		var col := 0
+		while x < area.end.x:
+			var shade := 0.05 + 0.03 * float((col * 31 + row * 17) % 4)
+			draw_on.draw_rect(Rect2(x, y, 45, 21), base.lightened(shade))
+			draw_on.draw_rect(Rect2(x, y, 45, 3), base.lightened(shade + 0.05))
+			x += 48.0
+			col += 1
+		y += 24.0
+		row += 1
 
 
 # --- pixel font --------------------------------------------------------------

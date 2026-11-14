@@ -86,7 +86,8 @@ This is the list of changes made to the first version of the game.
 7. **New interface.** A top bar (hearts, level, coins, charge, score), pop-up banners, and pause, level-clear and game-over screens. The menu was redone with biome cards.
 8. **Goblin enemy.** A new enemy that charges in a straight line.
 9. **Pixel font.** A 5x7 pixel font drawn in code, so the text matches the pixel art.
-10. **Art fixes.** Sprites are cropped and sized in code. Pictures with a white background get the background cut out when they load.
+10. **Dungeon look.** Panels and buttons are framed in carved stone blocks, a brick wall sits behind the menu and around the arena, and two torches flicker beside the title. All of it is drawn in code.
+11. **Art fixes.** Sprites are cropped and sized in code. Pictures with a white background get the background cut out when they load.
 
 ## Files
 
@@ -167,6 +168,7 @@ var POWER_NAMES := {
 
 var _used_cache := {}
 var _art_cache := {}
+var _stone_cache := {}
 var _tint_shader: Shader
 
 
@@ -355,11 +357,11 @@ func make_theme() -> Theme:
 	th.set_constant("shadow_offset_x", "Label", 2)
 	th.set_constant("shadow_offset_y", "Label", 2)
 	th.set_constant("line_spacing", "Label", 6)
-	th.set_stylebox("panel", "PanelContainer", box(Color(p.panel, 0.96), accent.darkened(0.25), 3, 0, 14))
-	th.set_stylebox("normal", "Button", box(p.panel_hi, accent.darkened(0.3), 3, 0, 12))
-	th.set_stylebox("hover", "Button", box(p.panel_hi.lightened(0.12), accent, 3, 0, 12))
-	th.set_stylebox("pressed", "Button", box(accent.darkened(0.35), accent.lightened(0.35), 3, 0, 12))
-	var focus := box(Color(0, 0, 0, 0), Color.WHITE, 3, 0, 12)
+	th.set_stylebox("panel", "PanelContainer", stone_box("panel", 8))
+	th.set_stylebox("normal", "Button", stone_box("button", 4))
+	th.set_stylebox("hover", "Button", stone_box("hover", 4))
+	th.set_stylebox("pressed", "Button", stone_box("pressed", 4))
+	var focus := box(Color(0, 0, 0, 0), accent.lightened(0.4), 3, 0, 12)
 	focus.draw_center = false
 	th.set_stylebox("focus", "Button", focus)
 	th.set_color("font_color", "Button", p.text)
@@ -368,6 +370,95 @@ func make_theme() -> Theme:
 	th.set_color("font_focus_color", "Button", Color.WHITE)
 	th.set_font_size("font_size", "Button", 16)
 	return th
+
+
+# --- dungeon stone frames ----------------------------------------------------
+
+# A panel or button drawn as a frame of carved stone blocks with a metal stud
+# in each corner. The frame is painted pixel by pixel into a tiny 16x16
+# picture, blown up 3x, and then tiled along the edges so any size works.
+# kind: "panel", "button", "hover" or "pressed". pad: space inside the frame.
+func stone_box(kind: String, pad: int) -> StyleBoxTexture:
+	var key := biome + kind
+	if not _stone_cache.has(key):
+		_stone_cache[key] = _stone_texture(kind)
+	var sb := StyleBoxTexture.new()
+	sb.texture = _stone_cache[key]
+	sb.set_texture_margin_all(12)
+	sb.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
+	sb.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
+	sb.set_content_margin_all(12 + pad)
+	return sb
+
+
+func _stone_texture(kind: String) -> ImageTexture:
+	var p := pal()
+	var wall: Color = p.wall
+	var accent: Color = p.accent
+	var fill: Color = p.panel
+	var stone := wall.lerp(Color(0.42, 0.42, 0.46), 0.6)   # grey stone with a hint of the biome
+	var pressed := false
+	match kind:
+		"button":
+			fill = p.panel_hi
+		"hover":
+			fill = (p.panel_hi as Color).lightened(0.12)
+			stone = stone.lightened(0.15)
+		"pressed":
+			fill = accent.darkened(0.5)
+			pressed = true
+	var light := stone.lightened(0.35)
+	var dark := stone.darkened(0.5)
+	if pressed:   # a pressed slab is lit from the other side
+		var swap := light
+		light = dark
+		dark = swap
+	var edge := Color(0.05, 0.04, 0.04)
+	var img := Image.create(16, 16, false, Image.FORMAT_RGBA8)
+	for y in 16:
+		for x in 16:
+			var d: int = min(min(x, y), min(15 - x, 15 - y))   # how far in from the edge
+			var c := fill
+			if d == 0:
+				var corner := (x == 0 or x == 15) and (y == 0 or y == 15)
+				c = Color(0, 0, 0, 0) if corner else edge
+			elif d == 1:
+				var top_left := x == 1 or y == 1
+				var bottom_right := x == 14 or y == 14
+				c = stone if (top_left and bottom_right) else (light if top_left else dark)
+			elif d == 2:
+				c = stone.darkened(0.12) if (x * 7 + y * 13) % 5 == 0 else stone
+			elif d == 3:
+				c = edge
+			if (d == 1 or d == 2) and (x == 7 or y == 7):
+				c = stone.darkened(0.5)   # the gap between two blocks
+			img.set_pixel(x, y, c)
+	var stud := accent.lerp(Color(0.8, 0.8, 0.8), 0.35)
+	for at in [Vector2i(2, 2), Vector2i(13, 2), Vector2i(2, 13), Vector2i(13, 13)]:
+		img.set_pixel(at.x, at.y, stud)
+	img.resize(48, 48, Image.INTERPOLATE_NEAREST)
+	return ImageTexture.create_from_image(img)
+
+
+# Fills a rectangle with a dim brick wall. `draw_on` is the node being drawn.
+func draw_bricks(draw_on: CanvasItem, area: Rect2) -> void:
+	var p := pal()
+	var base: Color = p.bg
+	var mortar := base.darkened(0.45)
+	draw_on.draw_rect(area, mortar)
+	var row := 0
+	var y := area.position.y
+	while y < area.end.y:
+		var x := area.position.x - (24.0 if row % 2 == 1 else 0.0)
+		var col := 0
+		while x < area.end.x:
+			var shade := 0.05 + 0.03 * float((col * 31 + row * 17) % 4)
+			draw_on.draw_rect(Rect2(x, y, 45, 21), base.lightened(shade))
+			draw_on.draw_rect(Rect2(x, y, 45, 3), base.lightened(shade + 0.05))
+			x += 48.0
+			col += 1
+		y += 24.0
+		row += 1
 
 
 # --- pixel font --------------------------------------------------------------
@@ -1137,6 +1228,8 @@ func _draw() -> void:
 	var t: int = game.TILE
 	var cols: int = game.COLS
 	var rows: int = game.ROWS
+	# dungeon brickwork behind and around the arena
+	GameData.draw_bricks(self, Rect2(-720, -480, cols * t + 1440, rows * t + 960))
 	draw_rect(Rect2(-6, -6, cols * t + 12, rows * t + 12), p.wall_dark)
 
 	for y in rows:
@@ -1953,10 +2046,10 @@ func _spacer() -> Control:
 func _build_bar() -> void:
 	var p := GameData.pal()
 	var bar := PanelContainer.new()
-	bar.add_theme_stylebox_override("panel", GameData.box(Color(p.panel, 0.96), p.accent.darkened(0.25), 3, 0, 10))
+	bar.add_theme_stylebox_override("panel", GameData.stone_box("panel", 2))
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(bar)
-	bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE, Control.PRESET_MODE_MINSIZE, 10)
+	bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE, Control.PRESET_MODE_MINSIZE, 6)
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
@@ -1991,8 +2084,8 @@ func _build_bar() -> void:
 	chip_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(chip_row)
 	chip_row.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	chip_row.offset_top = 66
-	chip_row.offset_bottom = 66
+	chip_row.offset_top = 68
+	chip_row.offset_bottom = 68
 	chip_row.offset_right = -26
 	for type in ["shield", "haste", "fury", "freeze"]:
 		var chip := _label("", 16, GameData.POWER_COLORS[type])
@@ -2046,7 +2139,7 @@ func _build_overlay() -> void:
 	overlay.add_child(center)
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(400, 0)
-	panel.add_theme_stylebox_override("panel", GameData.box(GameData.pal().panel, GameData.pal().accent, 4, 0, 28))
+	panel.add_theme_stylebox_override("panel", GameData.stone_box("panel", 16))
 	center.add_child(panel)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 16)
@@ -2168,6 +2261,9 @@ extends Control
 var bg: ColorRect
 var title: Label
 var cards := {}
+var wall: Control
+var torches: Array = []
+var time := 0.0
 
 
 func _ready() -> void:
@@ -2176,6 +2272,11 @@ func _ready() -> void:
 	bg = ColorRect.new()
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
+	wall = Control.new()   # brick wall, drawn in code
+	wall.set_anchors_preset(Control.PRESET_FULL_RECT)
+	wall.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wall.draw.connect(func(): GameData.draw_bricks(wall, Rect2(Vector2.ZERO, wall.size)))
+	add_child(wall)
 
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -2187,7 +2288,13 @@ func _ready() -> void:
 	title = _label("TETHER SWAP", 64)
 	title.add_theme_constant_override("shadow_offset_x", 6)
 	title.add_theme_constant_override("shadow_offset_y", 6)
-	col.add_child(title)
+	var title_row := HBoxContainer.new()
+	title_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	title_row.add_theme_constant_override("separation", 36)
+	col.add_child(title_row)
+	title_row.add_child(_torch())
+	title_row.add_child(title)
+	title_row.add_child(_torch())
 
 	col.add_child(_label("Grab every coin. Open the portal. Don't get slimed.", 16))
 	if GameData.best_score > 0:
@@ -2219,6 +2326,45 @@ func _ready() -> void:
 
 	select_biome(GameData.biome)
 	play.grab_focus()
+
+
+func _process(delta: float) -> void:
+	time += delta
+	for t in torches:
+		t.queue_redraw()
+
+
+# A wall torch with a flickering flame, drawn in chunky 4-pixel blocks.
+func _torch() -> Control:
+	var t := Control.new()
+	t.custom_minimum_size = Vector2(36, 84)
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var seed_offset := torches.size() * 2.3
+	t.draw.connect(func(): _draw_torch(t, seed_offset))
+	torches.append(t)
+	return t
+
+
+func _draw_torch(t: Control, offset: float) -> void:
+	var p := GameData.pal()
+	var flame: Color = p.hazard
+	var u := 4.0
+	var mid := 18.0
+	var step: float = floor(time * 9.0) + offset  # jumps 9 times a second, like sprite frames
+	t.draw_circle(Vector2(mid, 30), 30.0 + sin(step) * 2.0, Color(flame, 0.07))
+	# handle and iron cup
+	t.draw_rect(Rect2(mid - u, 48, u * 2, 32), Color("5a3a22"))
+	t.draw_rect(Rect2(mid - u, 48, u, 32), Color("7a5232"))
+	t.draw_rect(Rect2(mid - u * 3, 40, u * 6, u * 2), Color("3a3a40"))
+	t.draw_rect(Rect2(mid - u * 3, 40, u * 6, u), Color("5c5c66"))
+	# flame: five columns of blocks whose heights wobble
+	var heights := [2, 4, 6, 4, 2]
+	for i in 5:
+		var h: int = heights[i] + int(round(sin(step * 1.7 + i * 2.1)))
+		var x := mid - u * 2.5 + i * u
+		t.draw_rect(Rect2(x, 40 - h * u, u, h * u), flame)
+		if i >= 1 and i <= 3 and h > 2:
+			t.draw_rect(Rect2(x, 40 - (h - 2) * u, u, (h - 2) * u), flame.lightened(0.55))
 
 
 func _label(text: String, size: int, alpha: float = 1.0) -> Label:
@@ -2270,6 +2416,7 @@ func select_biome(b: String) -> void:
 	var p := GameData.pal()
 	theme = GameData.make_theme()
 	bg.color = p.bg
+	wall.queue_redraw()
 	title.add_theme_color_override("font_color", p.accent)
 	for key in cards:
 		cards[key].set_pressed_no_signal(key == b)

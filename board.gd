@@ -11,6 +11,8 @@ func _draw() -> void:
 	var t: int = game.TILE
 	var cols: int = game.COLS
 	var rows: int = game.ROWS
+	# dungeon brickwork behind and around the arena
+	GameData.draw_bricks(self, Rect2(-720, -480, cols * t + 1440, rows * t + 960))
 	draw_rect(Rect2(-6, -6, cols * t + 12, rows * t + 12), p.wall_dark)
 
 	for y in rows:
