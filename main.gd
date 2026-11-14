@@ -62,7 +62,6 @@ var hud
 
 func _ready() -> void:
 	get_tree().paused = false
-	GameData.music("game")
 	# Anything placed by hand in main.tscn is replaced by the generated level.
 	for c in get_children():
 		remove_child(c)
@@ -438,7 +437,6 @@ func player_arrived() -> void:
 		return
 	var c: Vector2i = player.cell
 	if hazards.has(c):
-		GameData.sfx("spikes")
 		player.take_damage(1)
 		_fx("burst", player.position, GameData.pal().hazard, {"r1": 26.0, "life": 0.3})
 		if player.alive:
@@ -446,7 +444,6 @@ func player_arrived() -> void:
 		return
 	if coins.has(c):
 		coins[c].collect()
-		GameData.sfx("coin")
 		coins.erase(c)
 		coins_got += 1
 		add_score(10, player.position)
@@ -470,7 +467,6 @@ func _take_powerup(c: Vector2i) -> void:
 	var type: String = pu.ptype
 	powerups.erase(c)
 	pu.queue_free()
-	GameData.sfx({"heart": "heal", "haste": "haste"}.get(type, "powerup"))
 	match type:
 		"heart":
 			if GameData.hp < GameData.max_hp:
@@ -494,7 +490,6 @@ func _take_powerup(c: Vector2i) -> void:
 
 
 func player_attack(cells: Array, dmg: int, dir: Vector2i, all_round: bool) -> void:
-	GameData.sfx("sword")
 	var col: Color = GameData.POWER_COLORS["fury"] if all_round else Color.WHITE
 	_fx("slash", player.position + Vector2(0, -4), col, {"life": 0.16, "dir": Vector2(dir), "full": all_round})
 	for e in enemies.duplicate():
@@ -516,7 +511,6 @@ func player_attack(cells: Array, dmg: int, dir: Vector2i, all_round: bool) -> vo
 # a slime sitting on the anchor is thrown to where the hero was, and a full
 # charge adds a blast at both ends.
 func tether_strike(from_pos: Vector2, to_pos: Vector2, from_cell: Vector2i, to_cell: Vector2i, overcharged: bool) -> void:
-	GameData.sfx("explosion" if overcharged else "zip")
 	var accent: Color = GameData.pal().accent
 	var swapped = enemy_at(to_cell)
 	for e in enemies.duplicate():
@@ -540,7 +534,6 @@ func tether_strike(from_pos: Vector2, to_pos: Vector2, from_cell: Vector2i, to_c
 
 func enemy_killed(e, by_hazard: bool) -> void:
 	kills += 1
-	GameData.sfx("slime" if e.kind == "slime" else "goblin")
 	var pts := 50 if by_hazard else 25
 	if e.kind != "slime":
 		pts += 25
@@ -556,13 +549,11 @@ func add_score(points: int, at: Vector2) -> void:
 
 
 func on_player_hurt() -> void:
-	GameData.sfx("hurt")
 	shake = 7.0
 	_fx("ring", player.position, Color(1, 0.25, 0.25), {"r1": 36.0, "life": 0.35})
 
 
 func on_shield_break() -> void:
-	GameData.sfx("shield_break")
 	shake = 4.0
 	_fx("ring", player.position, GameData.POWER_COLORS["shield"], {"r1": 44.0, "life": 0.4})
 	float_text(player.position, "BLOCKED", GameData.POWER_COLORS["shield"])
@@ -572,8 +563,6 @@ func on_shield_break() -> void:
 
 func _level_clear() -> void:
 	playing = false
-	GameData.music("")
-	GameData.sfx("victory")
 	var lvl: int = GameData.level
 	var bonus: int = 100 * lvl + max(0, 60 - int(level_time)) * 2
 	GameData.total_score += bonus
@@ -586,8 +575,6 @@ func _level_clear() -> void:
 
 func game_over() -> void:
 	playing = false
-	GameData.music("")
-	GameData.sfx("game_over")
 	GameData.record()
 	var body := "You reached level %d\n\nScore  %d\nBest  %d" % [GameData.level, GameData.total_score, GameData.best_score]
 	hud.show_overlay("GAME OVER", body, [["Try Again", _restart_run], ["Main Menu", _to_menu]])

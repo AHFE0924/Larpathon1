@@ -2428,22 +2428,3 @@ func _on_play_pressed() -> void:
 ```
 
 </details>
-
-## Sound
-
-All sounds live in `audio/` and are played through two helpers in `GameData.gd`:
-`GameData.sfx("coin")` for effects and `GameData.music("menu")` / `GameData.music("game")` for background music.
-To swap a sound, replace its `.ogg` file and keep the name.
-
-| File | Plays when | Source |
-|------|-----------|--------|
-| `music_menu.ogg`, `music_game.ogg` | Title screen / in a level | "Retro Game Music Pack" by Juhani Junkala (CC0) |
-| `victory.ogg`, `game_over.ogg` | Level clear / game over | Homebrew VGM jingles by Beatscribe (CC0) |
-| `coin.ogg` | Coin picked up | Kenney (CC0) |
-| `sword.ogg` | Slash attack | Kenney RPG Audio (CC0) |
-| `anchor.ogg`, `zip.ogg` | Anchor dropped / zip back to it | Kenney Interface Sounds, Digital Audio (CC0) |
-| `explosion.ogg` | Charged blast | Kenney Sci-Fi Sounds (CC0) |
-| `slime.ogg`, `goblin.ogg` | Slime / goblin defeated | Kenney Sci-Fi Sounds, FPS Starter Kit (CC0) |
-| `spikes.ogg`, `hurt.ogg`, `shield_break.ogg` | Stepping on a hazard / losing a heart / shield blocking | Kenney Impact Sounds (CC0) |
-| `powerup.ogg`, `haste.ogg`, `heal.ogg` | Power-up / speed boost / heart restored | Kenney Digital Audio (CC0) |
-| `click.ogg` | Any button | Kenney Interface Sounds (CC0) |

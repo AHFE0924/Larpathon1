@@ -52,41 +52,6 @@ func _ready() -> void:
 	randomize()
 	_setup_input()
 	_load()
-	process_mode = Node.PROCESS_MODE_ALWAYS   # sound keeps playing on the pause screen
-	_music = AudioStreamPlayer.new()
-	_music.volume_db = -12.0
-	add_child(_music)
-	# Every button in the game clicks, wherever it is made.
-	get_tree().node_added.connect(func(n): if n is Button: n.pressed.connect(sfx.bind("click")))
-
-
-# --- sound -------------------------------------------------------------------
-
-var _sfx := {}   # sound name -> its player
-var _music: AudioStreamPlayer
-
-
-func sfx(sound: String) -> void:
-	if not _sfx.has(sound):
-		var p := AudioStreamPlayer.new()
-		p.stream = load("res://audio/%s.ogg" % sound)
-		p.max_polyphony = 4
-		add_child(p)
-		_sfx[sound] = p
-	_sfx[sound].play()
-
-
-# "menu" or "game"; "" stops the music. Asking for the track already playing does nothing.
-func music(track: String) -> void:
-	if track == "":
-		_music.stop()
-		return
-	var stream: AudioStreamOggVorbis = load("res://audio/music_%s.ogg" % track)
-	if _music.stream == stream and _music.playing:
-		return
-	stream.loop = true
-	_music.stream = stream
-	_music.play()
 
 
 func pal() -> Dictionary:

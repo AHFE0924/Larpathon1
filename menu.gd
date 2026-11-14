@@ -10,7 +10,6 @@ var time := 0.0
 
 
 func _ready() -> void:
-	GameData.music("menu")
 	get_tree().paused = false
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST   # keeps the pixel font crisp
 	bg = ColorRect.new()

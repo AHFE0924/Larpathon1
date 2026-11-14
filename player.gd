@@ -184,7 +184,6 @@ func tether() -> void:
 		active_anchor.color = GameData.pal().accent
 		active_anchor.position = game.cell_to_world(cell)
 		game.objects.add_child(active_anchor)
-		GameData.sfx("anchor")
 		return
 	if anchor_cell == cell:
 		_clear_anchor()
